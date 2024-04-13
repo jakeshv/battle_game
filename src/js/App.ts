@@ -45,12 +45,5 @@ export class App {
      *
      *   app.stage.addChild(anim)
      */
-
-    const app = this.app
-
-    // Animate the rotation
-    app.ticker.add(() => {
-      //anim.rotation += 0.01
-    })
   }
 }
