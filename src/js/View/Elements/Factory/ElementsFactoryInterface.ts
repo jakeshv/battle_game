@@ -1,6 +1,9 @@
-import { HeroInterface } from '../Heroes/HeroInterface'
+import { AbstractCharacter } from '../Heroes/AbstractCharacter'
 
 export interface ElementsFactoryInterface {
-  createHero(): HeroInterface
+  createHero(): AbstractCharacter
+
+  createEnemy(): AbstractCharacter
+
   loadTextures(): void
 }

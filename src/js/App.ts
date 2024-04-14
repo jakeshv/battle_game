@@ -1,10 +1,11 @@
 import { Application } from 'pixi.js'
 import { DefaultView } from './View/Template/Default'
 import { KnightElementsFactory } from './View/Elements/Factory/KnightElementsFactory'
+import { DefaultPresenter } from './Presenter/Default'
+import { MiniGameModel } from './Model/MiniGame'
 
 export class App {
   protected app: Application
-  private view: DefaultView | null = null
 
   constructor() {
     this.app = new Application()
@@ -16,8 +17,11 @@ export class App {
       view: document.querySelector('#game') as HTMLCanvasElement
     })
 
-    this.view = new DefaultView(this.app, new KnightElementsFactory())
-    await this.view.init()
+    const view = new DefaultView(this.app, new KnightElementsFactory())
+    const model = new MiniGameModel()
+
+    const presenter = new DefaultPresenter(view, model)
+    await presenter.start()
 
     //await this.testStart()
   }
