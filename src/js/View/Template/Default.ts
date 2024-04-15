@@ -1,55 +1,60 @@
-import { Application, Assets, Container, FederatedPointerEvent, Sprite, Text } from 'pixi.js'
+import { Application, Assets, FederatedPointerEvent, Sprite, Text } from 'pixi.js'
 import { ElementsFactoryInterface } from '../Elements/Factory/ElementsFactoryInterface'
 import { DefaultDistributor } from '../Distribution/DefaultDistributor'
 import { AbstractView, MoveState } from './AbstractView'
 import { PresenterInterface } from '../../Presenter/PresenterInterface'
-import { DistributorInterface } from '../Distribution/DistributorInterface'
-import { AbstractCharacter } from '../Elements/Heroes/AbstractCharacter'
 import { Coordinates } from '../../Common/Types'
+import { HeroContainer } from '../Elements/Heroes/HeroContainer'
+import { EnemyContainer } from '../Elements/Heroes/EnemyContainer'
+import { AbstractCharacterContainer } from '../Elements/Heroes/AbstractCharacterContainer'
+import { DefaultGate } from '../Elements/Gates/DefaultGate'
 
 const BASE_IMAGE_PATH = 'assets/images/background/'
 const FONT_SRC = 'assets/fonts/Marvin.otf'
 
-const HEROES_SPEED = 2
-const FONT_NAME = 'DefaultFont'
-const FONT_SIZE = 32
-const FONT_COLOR = '#12de90'
+const HEROES_SPEED = 3
+const FONT_NAME = 'Marvin'
+const FONT_SIZE = 42
+const FONT_COLOR = '#36eacf'
 
 export class DefaultView extends AbstractView {
-  protected heroText: Text
-  protected enemyText: Text
-
   protected readonly width: number
   protected readonly borderLeft: number
   protected readonly borderRight: number
   protected readonly centerX: number
 
-  protected heroDistributor: DistributorInterface
-  protected enemyDistributor: DistributorInterface
+  protected enemiesContainer: AbstractCharacterContainer
+  protected heroesContainer: AbstractCharacterContainer
 
   protected directionX: number
   protected startHeroesY: number
   protected startEnemiesY: number
+  protected gateY: number
 
   protected fightDirection: Coordinates | null = null
+  protected isFight: boolean = false
+  protected gate: DefaultGate
 
   constructor(app: Application, elementsFactory: ElementsFactoryInterface) {
     super(app, elementsFactory)
 
-    this.heroDistributor = new DefaultDistributor()
-    this.enemyDistributor = new DefaultDistributor()
+    this.heroesContainer = new HeroContainer(app, new DefaultDistributor(), elementsFactory)
+    this.enemiesContainer = new EnemyContainer(app, new DefaultDistributor(), elementsFactory)
 
     this.width = this.app.screen.width / 3
     this.borderLeft = this.app.screen.width / 2 - 150
     this.borderRight = this.app.screen.width / 2 + 150
     this.centerX = this.app.screen.width / 2
     this.directionX = this.centerX
+    this.gateY = 550
 
-    this.startHeroesY = this.app.screen.height - 200
+    this.heroesContainer.setBorderRight(this.borderRight)
+    this.heroesContainer.setBorderLeft(this.borderLeft)
+
+    this.startHeroesY = this.app.screen.height - 100
     this.startEnemiesY = 300
 
-    this.heroText = new Text()
-    this.enemyText = new Text()
+    this.gate = new DefaultGate(this.borderRight - this.borderLeft, FONT_NAME)
   }
 
   async init(presenter: PresenterInterface): Promise<void> {
@@ -59,43 +64,46 @@ export class DefaultView extends AbstractView {
     await this.loadTextures()
     await this.loadFonts()
 
-    this.app.stage.addChild(this.heroesContainer)
-    this.app.stage.addChild(this.enemiesContainer)
+    this.app.stage.addChild(this.enemiesContainer.getContainer())
+    this.app.stage.addChild(this.heroesContainer.getContainer())
 
-    this.createHeroText()
-    this.createEnemyText()
+    this.heroesContainer.createCharacterText(this.createCharacterText())
+    this.enemiesContainer.createCharacterText(this.createCharacterText())
+
+    this.app.stage.addChild(this.gate.getContainer())
+    this.gate.getContainer().x = this.borderLeft
+    this.gate.getContainer().y = this.gateY
 
     this.start()
 
     this.app.stage
       .on('pointerdown', this.onViewClick.bind(this))
-      //.on('pointerup', pointerUp)
       .on('pointermove', this.pointerMove.bind(this))
 
-    let time = 0
-
-    this.app.ticker.add((ticker) => {
+    this.app.ticker.add(() => {
       this.moveHeroes()
       this.moveEnemies()
-
-      this.updateHeroesText()
-      this.updateEnemyText()
-
-      time += ticker.deltaTime
-
-      if (time > 10) {
-        this.updateHeroes(this.heroes.length)
-        time = 0
-      }
+      this.checkFightConditions()
+      this.checkGate()
     })
   }
 
-  start() {
-    this.heroesContainer.x = this.centerX
-    this.heroesContainer.y = this.startHeroesY
+  updateGate(left: number, right: number) {
+    if (this.gate) {
+      this.gate.updateText(left, right)
+    }
+  }
 
-    this.enemiesContainer.x = this.centerX
-    this.enemiesContainer.y = this.startEnemiesY
+  start() {
+    this.heroesContainer.reset()
+    this.heroesContainer.getContainer().x = this.centerX
+    this.heroesContainer.getContainer().y = this.startHeroesY
+
+    this.enemiesContainer.reset()
+    this.enemiesContainer.getContainer().x = this.centerX
+    this.enemiesContainer.getContainer().y = this.startEnemiesY
+
+    this.gate.reset()
   }
 
   async loadTextures() {
@@ -104,24 +112,15 @@ export class DefaultView extends AbstractView {
 
   async loadFonts() {
     Assets.addBundle('fonts', [
-      { alias: FONT_NAME, src: FONT_SRC }
+      { alias: FONT_NAME, src: FONT_SRC },
+      { alias: 'Crosterian', src: 'https://pixijs.com/assets/webfont-loader/Crosterian.woff2' }
     ])
     await Assets.loadBundle('fonts')
   }
 
-  createHeroText() {
-    this.heroText = this.createCharacterText(this.heroes.length.toString())
-    this.app.stage.addChild(this.heroText)
-  }
-
-  createEnemyText() {
-    this.enemyText = this.createCharacterText(this.enemies.length.toString())
-    this.app.stage.addChild(this.enemyText)
-  }
-
-  createCharacterText(text: string): Text {
+  createCharacterText(): Text {
     return new Text({
-      text: text,
+      text: '',
       style: {
         fontFamily: FONT_NAME,
         fontSize: FONT_SIZE,
@@ -153,46 +152,8 @@ export class DefaultView extends AbstractView {
     this.app.stage.addChild(castle_back)
   }
 
-  updateHeroes(num: number): void {
-    this.updateCharacters(num, this.heroes, this.heroesContainer, this.heroDistributor, 'createHero')
-  }
-
-  updateEnemies(num: number): void {
-    this.updateCharacters(num, this.enemies, this.enemiesContainer, this.enemyDistributor, 'createEnemy')
-  }
-
-  updateCharacters(
-    num: number,
-    container: AbstractCharacter[],
-    spritesContainer: Container<any>,
-    distributor: DistributorInterface,
-    createMethod: 'createHero' | 'createEnemy'
-  ) {
-    if (num > container.length) {
-      const neededHeroes = num - container.length
-      for (let i = 0; i < neededHeroes; i++) {
-        const hero = this.elementsFactory[createMethod]()
-        container.push(hero)
-        spritesContainer.addChild(hero.getSprite())
-      }
-    }
-
-    distributor.setBorderRight(this.borderRight - spritesContainer.x)
-    distributor.setBorderLeft(this.borderLeft - spritesContainer.x)
-
-    const coordinates = distributor.distributeByNumber(num)
-
-    container.forEach((character, index) => {
-      character.setCoordinates(coordinates[index].x, coordinates[index].y)
-    })
-  }
-
   onViewClick() {
-    //this.updateHeroes(this.heroes.length + 3)
-    this.startFight()
-    this.heroes.forEach((hero) => {
-      hero.death()
-    })
+
   }
 
   pointerMove(event: FederatedPointerEvent) {
@@ -200,51 +161,120 @@ export class DefaultView extends AbstractView {
   }
 
   moveHeroes() {
-    let state: MoveState = 'strait'
-    if (this.directionX > this.heroesContainer.x + this.heroesContainer.width / 2) {
-      this.heroesContainer.x += HEROES_SPEED
-      state = 'right'
-    } else if (this.directionX < this.heroesContainer.x - this.heroesContainer.width / 2) {
-      this.heroesContainer.x -= HEROES_SPEED
-      state = 'left'
-    }
-    this.switchMoveAnimation(this.heroes, state)
+    if (!this.heroesContainer.isMovable()) return
+    if (this.fightDirection) {
+      this.moveToFight(this.heroesContainer)
+    } else {
+      let state: MoveState = 'strait'
+      const straitZone = this.heroesContainer.getContainer().width / 2
+      if (this.directionX > this.heroesContainer.getContainer().x + straitZone / 2) {
+        this.heroesContainer.getContainer().x += HEROES_SPEED
+        state = 'right'
+      } else if (this.directionX < this.heroesContainer.getContainer().x - straitZone / 2) {
+        this.heroesContainer.getContainer().x -= HEROES_SPEED
+        state = 'left'
+      }
+      this.heroesContainer.switchMoveAnimation(state)
 
-    if (this.heroesContainer.x > this.borderRight) {
-      this.heroesContainer.x = this.borderRight
-    } else if (this.heroesContainer.x < this.borderLeft) {
-      this.heroesContainer.x = this.borderLeft
+      if (this.heroesContainer.getContainer().x > this.borderRight) {
+        this.heroesContainer.getContainer().x = this.borderRight
+      } else if (this.heroesContainer.getContainer().x < this.borderLeft) {
+        this.heroesContainer.getContainer().x = this.borderLeft
+      }
+      this.heroesContainer.getContainer().y -= HEROES_SPEED
     }
   }
 
   moveEnemies() {
-    let state: MoveState = 'strait'
-    if (this.directionX > this.heroesContainer.x + this.heroesContainer.width / 2) {
-      this.enemiesContainer.x += HEROES_SPEED
-      state = 'right'
-    } else if (this.directionX < this.heroesContainer.x - this.heroesContainer.width / 2) {
-      this.enemiesContainer.x -= HEROES_SPEED
-      state = 'left'
+    if (!this.enemiesContainer.isMovable()) return
+    if (this.fightDirection) {
+      this.moveToFight(this.enemiesContainer)
     }
-    this.switchMoveAnimation(this.enemies, state)
   }
 
-  updateHeroesText() {
-    this.heroText.text = this.heroes.length
-    this.heroText.y = this.heroesContainer.y + this.heroesContainer.height / 2 - this.heroText.height
-    this.heroText.x = this.heroesContainer.x - this.heroText.width / 2
+  moveToFight(charactersContainer: AbstractCharacterContainer) {
+    if (this.fightDirection) {
+      let state: MoveState = 'strait'
+      if (this.fightDirection.x > charactersContainer.getContainer().x + HEROES_SPEED) {
+        charactersContainer.getContainer().x += HEROES_SPEED
+        state = 'right'
+      } else if (this.fightDirection.x < charactersContainer.getContainer().x - HEROES_SPEED) {
+        charactersContainer.getContainer().x -= HEROES_SPEED
+        state = 'left'
+      }
+      if (this.fightDirection.y > charactersContainer.getContainer().y + HEROES_SPEED) {
+        charactersContainer.getContainer().y += HEROES_SPEED
+      } else if (this.fightDirection.y < charactersContainer.getContainer().y - HEROES_SPEED) {
+        charactersContainer.getContainer().y -= HEROES_SPEED
+      }
+      if (!this.isFight) {
+        charactersContainer.switchMoveAnimation(state)
+      }
+    }
   }
 
-  updateEnemyText() {
-    this.enemyText.text = this.enemies.length
-    this.enemyText.y = this.enemiesContainer.y - this.enemyText.height
-    this.enemyText.x = this.enemiesContainer.x - this.enemyText.width / 2
+  setFightDirection() {
+    this.fightDirection = {
+      x: (this.heroesContainer.getContainer().x + this.enemiesContainer.getContainer().x) / 2,
+      y: (this.heroesContainer.getContainer().y + this.enemiesContainer.getContainer().y) / 2
+    }
+  }
+
+  checkFightConditions() {
+    if (this.heroesContainer.isMovable() && this.enemiesContainer.isMovable()) {
+      if (this.fightDirection) {
+        const diffX = Math.abs(this.heroesContainer.getContainer().x - this.enemiesContainer.getContainer().x)
+        const diffY = Math.abs(this.heroesContainer.getContainer().y - this.enemiesContainer.getContainer().y)
+        const errorFactor = 3 // определяется логикой сближения
+        if (diffX < HEROES_SPEED * errorFactor && diffY < HEROES_SPEED * errorFactor) {
+          this.startFight()
+        }
+      } else if (this.heroesContainer.getContainer().y < this.enemiesContainer.getContainer().y + this.enemiesContainer.getContainer().height) {
+        this.setFightDirection()
+      }
+    }
+    if (this.isFight) {
+      if (!this.heroesContainer.hasCharactersToDeath() && !this.enemiesContainer.hasCharactersToDeath()) {
+        this.stopFight()
+      }
+    }
+  }
+
+  checkGate() {
+    if (this.heroesContainer.isMovable() && this.presenter && !this.gate.isActivated()) {
+      if (this.heroesContainer.getContainer().y < this.gate.getContainer().y) {
+        if (this.heroesContainer.getContainer().x < this.centerX) {
+          this.gate.activateLeft()
+          this.presenter.enterLeftGate()
+        } else {
+          this.gate.activateRight()
+          this.presenter.enterRightGate()
+        }
+      }
+    }
   }
 
   startFight() {
-    this.fightDirection = {
-      x: this.heroesContainer.x,
-      y: this.heroesContainer.y,
+    this.isFight = true
+
+    this.heroesContainer.startFight()
+    this.enemiesContainer.startFight()
+
+    if (this.presenter) {
+      this.presenter.fight()
+    }
+  }
+
+  stopFight() {
+    this.isFight = false
+    this.fightDirection = null
+
+    this.heroesContainer.stopFight()
+    this.enemiesContainer.stopFight()
+
+    if (this.presenter) {
+      //setTimeout(this.presenter.endFight.bind(this), 1500)
+      this.presenter.endFight()
     }
   }
 }

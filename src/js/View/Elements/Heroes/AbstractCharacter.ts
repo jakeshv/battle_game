@@ -4,6 +4,9 @@ import { CharacterSpriteInterface } from './CharacterSpriteInterface'
 
 export type HeroState = 'run' | 'run_left' | 'run_right' | 'attack' | 'idle' | 'death'
 
+const BASE_ANIMATION_SPEED = 0.5
+const DEATH_ANIMATION_SPEED = 1
+
 export interface CharacterTextures {
   run: Texture[]
   attack: Texture[]
@@ -13,7 +16,7 @@ export interface CharacterTextures {
   run_right: Texture[]
 }
 
-export class AbstractCharacter implements CharacterInterface, CharacterSpriteInterface {
+export abstract class AbstractCharacter implements CharacterInterface, CharacterSpriteInterface {
   protected sprite: AnimatedSprite
   protected textures: CharacterTextures
   protected state: HeroState = 'run'
@@ -21,12 +24,14 @@ export class AbstractCharacter implements CharacterInterface, CharacterSpriteInt
   constructor(textures: CharacterTextures) {
     this.textures = textures
     this.sprite = new AnimatedSprite(this.getStartTexture())
+    this.sprite.roundPixels = true
 
     this.sprite.anchor.set(0.5)
     this.sprite.scale.set(1)
-    this.sprite.animationSpeed = 0.5
-    this.sprite.play()
+    this.sprite.animationSpeed = BASE_ANIMATION_SPEED
+    this.sprite.loop = false
     this.sprite.onComplete = this.checkState.bind(this)
+    this.sprite.play()
   }
 
   getStartTexture(): Texture[] {
@@ -43,39 +48,55 @@ export class AbstractCharacter implements CharacterInterface, CharacterSpriteInt
   }
 
   attack() {
+    this.state = 'attack'
     this.sprite.textures = this.textures.attack
-    this.sprite.loop = true
+    this.sprite.animationSpeed = Math.random() / 3
     this.sprite.play()
   }
 
   idle() {
+    this.state = 'idle'
+    this.sprite.animationSpeed = BASE_ANIMATION_SPEED
     this.sprite.textures = this.textures.idle
-    this.sprite.loop = true
     this.sprite.play()
   }
 
-  death() {
+  death(deathCallback?: () => void) {
+    this.state = 'death'
     this.sprite.textures = this.textures.death
-    this.sprite.loop = false
+    this.sprite.animationSpeed = DEATH_ANIMATION_SPEED
+    this.sprite.onComplete = () => {
+      if (deathCallback) {
+        deathCallback()
+      }
+      this.sprite.destroy()
+    }
     this.sprite.play()
   }
 
   run() {
-    this.sprite.loop = false
+    if (this.state === 'run') return
     this.state = 'run'
+    this.sprite.textures = this.textures.run
+    this.sprite.play()
   }
 
   runLeft() {
-    this.sprite.loop = false
+    if (this.state === 'run_left') return
     this.state = 'run_left'
+    this.sprite.textures = this.textures.run_left
+    this.sprite.play()
   }
 
   runRight() {
-    this.sprite.loop = false
+    if (this.state === 'run_right') return
     this.state = 'run_right'
+    this.sprite.textures = this.textures.run_right
+    this.sprite.play()
   }
 
   checkState() {
+    this.sprite.animationSpeed = BASE_ANIMATION_SPEED
     switch (this.state) {
       case 'run':
         this.sprite.textures = this.textures.run
@@ -86,6 +107,14 @@ export class AbstractCharacter implements CharacterInterface, CharacterSpriteInt
       case 'run_right':
         this.sprite.textures = this.textures.run_right
         break
+      case 'attack':
+        this.attack()
+        break
+      case 'idle':
+        this.sprite.textures = this.textures.idle
+        break
+      default:
+        throw new Error('state doesn\'t exist')
     }
     this.sprite.play()
   }

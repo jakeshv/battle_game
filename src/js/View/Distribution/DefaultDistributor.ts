@@ -1,9 +1,9 @@
 import { Coordinates } from '../../Common/Types'
 import { DistributorInterface } from './DistributorInterface'
 
-const ELEMENTS_DISTANCE_X = 35
-const ELEMENTS_DISTANCE_Y = 25
-const MIN_ELEMENTS_PER_LINE = 2
+const ELEMENTS_DISTANCE_X = 25
+const ELEMENTS_DISTANCE_Y = 15
+const MIN_ELEMENTS_PER_LINE = 4
 
 export class DefaultDistributor implements DistributorInterface {
   borderLeft: number | null = null
@@ -31,7 +31,7 @@ export class DefaultDistributor implements DistributorInterface {
       let startX = - ELEMENTS_DISTANCE_X * (numLineElements - 1) / 2
 
       for (let i = 0; i < numLineElements; i++) {
-        let randomShift = 0 //Math.random() * 10 - 5
+        let randomShift = (Math.random() - 0.5) * ELEMENTS_DISTANCE_X / 10
 
         let x = startX + ELEMENTS_DISTANCE_X * i + randomShift
 
@@ -64,9 +64,6 @@ export class DefaultDistributor implements DistributorInterface {
     if (this.borderLeft !== null && x < this.borderLeft) {
       return true
     }
-    if (this.borderRight !== null && x > this.borderRight) {
-      return true
-    }
-    return false
+    return this.borderRight !== null && x > this.borderRight;
   }
 }

@@ -1,4 +1,6 @@
 export const gameConfig = {
   startHeroesNumber: 10,
-  startEnemiesNumber: 15
+  startEnemiesNumber: 40,
+  leftMultiValue: 3,
+  rightMultiValue: 6,
 }

@@ -3,7 +3,7 @@ export interface CharacterInterface {
 
   idle(): void
 
-  death(): void
+  death(deathCallback: () => void): void
 
   runLeft(): void
 
