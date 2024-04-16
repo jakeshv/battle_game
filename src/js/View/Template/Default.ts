@@ -8,12 +8,16 @@ import { HeroContainer } from '../Elements/Heroes/HeroContainer'
 import { EnemyContainer } from '../Elements/Heroes/EnemyContainer'
 import { AbstractCharacterContainer } from '../Elements/Heroes/AbstractCharacterContainer'
 import { DefaultGate } from '../Elements/Gates/DefaultGate'
+import { ANCHOR_CENTER } from '../../Common/Constants'
+import { AbstractWindow } from '../Window/AbstractWindow'
+import { VictoryWindow } from '../Window/VictoryWindow'
+import { viewConfig } from '../../../config/config'
+import { DefeatWindow } from '../Window/DefeatWindow'
 
 const BASE_IMAGE_PATH = 'assets/images/background/'
 const FONT_SRC = 'assets/fonts/Marvin.otf'
 
 const HEROES_SPEED = 3
-const FONT_NAME = 'Marvin'
 const FONT_SIZE = 42
 const FONT_COLOR = '#36eacf'
 
@@ -25,14 +29,18 @@ export class DefaultView extends AbstractView {
 
   protected enemiesContainer: AbstractCharacterContainer
   protected heroesContainer: AbstractCharacterContainer
+  protected victoryWindow: AbstractWindow
+  protected defeatWindow: AbstractWindow
 
   protected directionX: number
   protected startHeroesY: number
   protected startEnemiesY: number
   protected gateY: number
+  protected castleY: number = 0
 
   protected fightDirection: Coordinates | null = null
   protected isFight: boolean = false
+  protected isGameOver: boolean = false
   protected gate: DefaultGate
 
   constructor(app: Application, elementsFactory: ElementsFactoryInterface) {
@@ -46,15 +54,17 @@ export class DefaultView extends AbstractView {
     this.borderRight = this.app.screen.width / 2 + 150
     this.centerX = this.app.screen.width / 2
     this.directionX = this.centerX
-    this.gateY = 550
+    this.gateY = this.app.screen.height * 0.6
 
     this.heroesContainer.setBorderRight(this.borderRight)
     this.heroesContainer.setBorderLeft(this.borderLeft)
 
-    this.startHeroesY = this.app.screen.height - 100
-    this.startEnemiesY = 300
+    this.startHeroesY = this.app.screen.height * 0.9
+    this.startEnemiesY = this.app.screen.height / 4
 
-    this.gate = new DefaultGate(this.borderRight - this.borderLeft, FONT_NAME)
+    this.gate = new DefaultGate(this.borderRight - this.borderLeft)
+    this.victoryWindow = new VictoryWindow(this.width, this.app.screen.height)
+    this.defeatWindow = new DefeatWindow(this.width, this.app.screen.height)
   }
 
   async init(presenter: PresenterInterface): Promise<void> {
@@ -63,6 +73,8 @@ export class DefaultView extends AbstractView {
     await this.createBackground()
     await this.loadTextures()
     await this.loadFonts()
+    await this.victoryWindow.init()
+    await this.defeatWindow.init()
 
     this.app.stage.addChild(this.enemiesContainer.getContainer())
     this.app.stage.addChild(this.heroesContainer.getContainer())
@@ -74,17 +86,29 @@ export class DefaultView extends AbstractView {
     this.gate.getContainer().x = this.borderLeft
     this.gate.getContainer().y = this.gateY
 
+    this.app.stage.addChild(this.victoryWindow.getContainer())
+    this.victoryWindow.getContainer().x = this.centerX - this.width / 2
+    this.victoryWindow.onLeftButtonClick(() => {
+      this.presenter?.startNewGame()
+    })
+
+    this.app.stage.addChild(this.defeatWindow.getContainer())
+    this.defeatWindow.getContainer().x = this.centerX - this.width / 2
+    this.defeatWindow.onLeftButtonClick(() => {
+      this.presenter?.startNewGame()
+    })
+    this.defeatWindow.onRightButtonClick(() => {
+      this.presenter?.startNewGame()
+    })
+
     this.start()
 
-    this.app.stage
-      .on('pointerdown', this.onViewClick.bind(this))
-      .on('pointermove', this.pointerMove.bind(this))
+    this.app.stage.on('pointermove', this.pointerMove.bind(this))
 
     this.app.ticker.add(() => {
       this.moveHeroes()
       this.moveEnemies()
-      this.checkFightConditions()
-      this.checkGate()
+      this.checkStatusHeroes()
     })
   }
 
@@ -95,6 +119,8 @@ export class DefaultView extends AbstractView {
   }
 
   start() {
+    this.isGameOver = false
+
     this.heroesContainer.reset()
     this.heroesContainer.getContainer().x = this.centerX
     this.heroesContainer.getContainer().y = this.startHeroesY
@@ -112,8 +138,7 @@ export class DefaultView extends AbstractView {
 
   async loadFonts() {
     Assets.addBundle('fonts', [
-      { alias: FONT_NAME, src: FONT_SRC },
-      { alias: 'Crosterian', src: 'https://pixijs.com/assets/webfont-loader/Crosterian.woff2' }
+      { alias: viewConfig.fontFamily, src: FONT_SRC }
     ])
     await Assets.loadBundle('fonts')
   }
@@ -122,7 +147,7 @@ export class DefaultView extends AbstractView {
     return new Text({
       text: '',
       style: {
-        fontFamily: FONT_NAME,
+        fontFamily: viewConfig.fontFamily,
         fontSize: FONT_SIZE,
         fill: FONT_COLOR,
         fontWeight: 'bold'
@@ -133,27 +158,24 @@ export class DefaultView extends AbstractView {
   async createBackground() {
     const red_castle_back_texture = await Assets.load(BASE_IMAGE_PATH + 'red_castle_back.png')
     const castle_back_texture = await Assets.load(BASE_IMAGE_PATH + 'simple_back.png')
-    const centerX = this.app.screen.width / 2
 
     const red_castle_back = new Sprite(red_castle_back_texture)
-    red_castle_back.anchor.set(0.5, 0)
+    red_castle_back.anchor.set(ANCHOR_CENTER, 0.3)
     red_castle_back.width = this.width
-    red_castle_back.height = this.app.screen.height / 2
-    red_castle_back.x = centerX
+    red_castle_back.height = this.app.screen.height
+    red_castle_back.x = this.centerX
     red_castle_back.y = 0
     this.app.stage.addChild(red_castle_back)
 
     const castle_back = new Sprite(castle_back_texture)
-    castle_back.anchor.set(0.5, 1)
+    castle_back.anchor.set(ANCHOR_CENTER, 0)
     castle_back.width = this.width
-    castle_back.height = this.app.screen.height / 2
-    castle_back.x = centerX
-    castle_back.y = this.app.screen.height
+    castle_back.height = this.app.screen.height
+    castle_back.x = this.centerX
+    castle_back.y = this.app.screen.height * 0.7
     this.app.stage.addChild(castle_back)
-  }
 
-  onViewClick() {
-
+    this.castleY = this.app.screen.height * 0.2
   }
 
   pointerMove(event: FederatedPointerEvent) {
@@ -240,7 +262,9 @@ export class DefaultView extends AbstractView {
     }
   }
 
-  checkGate() {
+  checkStatusHeroes() {
+    if (this.isGameOver) return
+    this.checkFightConditions()
     if (this.heroesContainer.isMovable() && this.presenter && !this.gate.isActivated()) {
       if (this.heroesContainer.getContainer().y < this.gate.getContainer().y) {
         if (this.heroesContainer.getContainer().x < this.centerX) {
@@ -251,6 +275,17 @@ export class DefaultView extends AbstractView {
           this.presenter.enterRightGate()
         }
       }
+    }
+    if (this.heroesContainer.getContainer().y < this.castleY) {
+      this.endGame()
+    }
+  }
+
+  endGame() {
+    this.isGameOver = true
+    this.heroesContainer.stop()
+    if (this.presenter) {
+      this.presenter.endGame()
     }
   }
 
@@ -273,8 +308,15 @@ export class DefaultView extends AbstractView {
     this.enemiesContainer.stopFight()
 
     if (this.presenter) {
-      //setTimeout(this.presenter.endFight.bind(this), 1500)
       this.presenter.endFight()
     }
+  }
+
+  showVictoryWindow() {
+    this.victoryWindow.show()
+  }
+
+  showDefeatWindow() {
+    this.defeatWindow.show()
   }
 }

@@ -7,11 +7,13 @@ export interface GameModelInterface {
 
   getNumEnemies(): number
 
-  getFightResult(): [number, number]
+  fight(): [number, number]
 
   setStartData(): void
 
   enterLeftGate(): void
 
   enterRightGate(): void
+
+  isWin(): boolean
 }

@@ -18,13 +18,21 @@ export class DefaultPresenter implements PresenterInterface {
   }
 
   fight() {
-    const [numHeroes, numEnemies] = this.model.getFightResult()
+    const [numHeroes, numEnemies] = this.model.fight()
     this.view.updateHeroes(numHeroes)
     this.view.updateEnemies(numEnemies)
   }
 
   endFight() {
-    this.startNewGame()
+    if (!this.model.isWin()) {
+      this.view.showDefeatWindow()
+    }
+  }
+
+  endGame() {
+    if (this.model.isWin()) {
+      this.view.showVictoryWindow()
+    }
   }
 
   startNewGame() {

@@ -33,7 +33,11 @@ export abstract class AbstractView {
     this.enemiesContainer.setTargetNumCharacters(num)
   }
 
-  abstract updateGate(left: number, right: number) : void
+  abstract updateGate(left: number, right: number): void
 
   abstract start(): void
+
+  abstract showVictoryWindow(): void
+
+  abstract showDefeatWindow(): void
 }

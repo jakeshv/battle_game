@@ -1,0 +1,1 @@
+export const ANCHOR_CENTER = 0.5

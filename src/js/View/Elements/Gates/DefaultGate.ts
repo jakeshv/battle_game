@@ -1,4 +1,5 @@
 import { Container, Graphics, Text } from 'pixi.js'
+import { viewConfig } from '../../../../config/config'
 
 const GATE_COLOR = 'rgba(57,212,250,0.3)'
 const BORDER_WIDTH = 3
@@ -8,15 +9,13 @@ const FONT_COLOR = '#196b83'
 
 export class DefaultGate {
   protected container: Container<any>
-  protected fontName: string
   protected leftText: Text
   protected rightText: Text
   protected activated: boolean = false
   protected rightBlock: Container<any>
   protected leftBlock: Container<any>
 
-  constructor(width: number, fontName: string) {
-    this.fontName = fontName
+  constructor(width: number) {
 
     this.container = new Container()
 
@@ -68,7 +67,7 @@ export class DefaultGate {
     return new Text({
       text: '',
       style: {
-        fontFamily: this.fontName,
+        fontFamily: viewConfig.fontFamily,
         fontSize: FONT_SIZE,
         fill: FONT_COLOR,
         fontWeight: 'bold'

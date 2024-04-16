@@ -1,8 +1,7 @@
 import { Coordinates } from '../../Common/Types'
 import { DistributorInterface } from './DistributorInterface'
+import { viewConfig } from '../../../config/config'
 
-const ELEMENTS_DISTANCE_X = 25
-const ELEMENTS_DISTANCE_Y = 15
 const MIN_ELEMENTS_PER_LINE = 4
 
 export class DefaultDistributor implements DistributorInterface {
@@ -28,18 +27,16 @@ export class DefaultDistributor implements DistributorInterface {
 
     while (count < elementsNumber) {
       let lastCount = count
-      let startX = - ELEMENTS_DISTANCE_X * (numLineElements - 1) / 2
+      let startX = - viewConfig.charactersDistanceX * (numLineElements - 1) / 2
 
       for (let i = 0; i < numLineElements; i++) {
-        let randomShift = (Math.random() - 0.5) * ELEMENTS_DISTANCE_X / 10
-
-        let x = startX + ELEMENTS_DISTANCE_X * i + randomShift
+        let x = startX + viewConfig.charactersDistanceX * i
 
         if (this.checkBorders(x)) {
           continue
         }
 
-        let y = ELEMENTS_DISTANCE_Y * numLine + randomShift
+        let y = viewConfig.charactersDistanceY * numLine
         result.push({ x, y })
         count++
       }

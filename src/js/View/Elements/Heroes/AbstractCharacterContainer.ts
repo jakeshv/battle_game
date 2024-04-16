@@ -5,7 +5,7 @@ import { MoveState } from '../../Template/AbstractView'
 import { ElementsFactoryInterface } from '../Factory/ElementsFactoryInterface'
 
 const ADD_DELAY_TIME = 2
-const REMOVE_DELAY_TIME = 5
+const REMOVE_DELAY_TIME = 3
 
 export abstract class AbstractCharacterContainer {
   protected app: Application
@@ -176,4 +176,12 @@ export abstract class AbstractCharacterContainer {
   }
 
   abstract stopFight(): void
+
+  stop() {
+    this.characters.forEach((character) => {
+      character.idle()
+    })
+    this.movable = false
+    this.isNeedUpdate = false
+  }
 }

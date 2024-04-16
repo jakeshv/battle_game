@@ -27,11 +27,12 @@ export class MiniGameModel implements GameModelInterface {
     return this.numEnemies
   }
 
-  getFightResult(): [number, number] {
-    return [
-      Math.max(0, this.numHeroes - this.numEnemies),
-      Math.max(0, this.numEnemies - this.numHeroes)
-    ]
+  fight(): [number, number] {
+    const heroes = Math.max(0, this.numHeroes - this.numEnemies)
+    const enemies = Math.max(0, this.numEnemies - this.numHeroes)
+    this.numHeroes = heroes
+    this.numEnemies = enemies
+    return [this.numHeroes, this.numEnemies]
   }
 
   setStartData() {
@@ -47,5 +48,9 @@ export class MiniGameModel implements GameModelInterface {
 
   enterRightGate() {
     this.numHeroes *= this.rightMultiValue
+  }
+
+  isWin() {
+    return this.numHeroes > 0
   }
 }

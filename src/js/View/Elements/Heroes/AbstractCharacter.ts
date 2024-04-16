@@ -1,6 +1,8 @@
 import { AnimatedSprite, Texture } from 'pixi.js'
 import { CharacterInterface } from './CharacterInterface'
 import { CharacterSpriteInterface } from './CharacterSpriteInterface'
+import { ANCHOR_CENTER } from '../../../Common/Constants'
+import { viewConfig } from '../../../../config/config'
 
 export type HeroState = 'run' | 'run_left' | 'run_right' | 'attack' | 'idle' | 'death'
 
@@ -26,8 +28,8 @@ export abstract class AbstractCharacter implements CharacterInterface, Character
     this.sprite = new AnimatedSprite(this.getStartTexture())
     this.sprite.roundPixels = true
 
-    this.sprite.anchor.set(0.5)
-    this.sprite.scale.set(1)
+    this.sprite.anchor.set(ANCHOR_CENTER)
+    this.sprite.scale.set(viewConfig.charactersScale)
     this.sprite.animationSpeed = BASE_ANIMATION_SPEED
     this.sprite.loop = false
     this.sprite.onComplete = this.checkState.bind(this)
