@@ -15,7 +15,6 @@ import { viewConfig } from '../../../config/config'
 import { DefeatWindow } from '../Window/DefeatWindow'
 
 const BASE_IMAGE_PATH = 'assets/images/background/'
-const FONT_SRC = 'assets/fonts/Marvin.otf'
 
 const HEROES_SPEED = 3
 const FONT_SIZE = 42
@@ -50,8 +49,8 @@ export class DefaultView extends AbstractView {
     this.enemiesContainer = new EnemyContainer(app, new DefaultDistributor(), elementsFactory)
 
     this.width = this.app.screen.width / 3
-    this.borderLeft = this.app.screen.width / 2 - 150
-    this.borderRight = this.app.screen.width / 2 + 150
+    this.borderLeft = this.app.screen.width / 2 - this.width / 4
+    this.borderRight = this.app.screen.width / 2 + this.width / 4
     this.centerX = this.app.screen.width / 2
     this.directionX = this.centerX
     this.gateY = this.app.screen.height * 0.6
@@ -75,6 +74,7 @@ export class DefaultView extends AbstractView {
     await this.loadFonts()
     await this.victoryWindow.init()
     await this.defeatWindow.init()
+    await this.heroesContainer.init()
 
     this.app.stage.addChild(this.enemiesContainer.getContainer())
     this.app.stage.addChild(this.heroesContainer.getContainer())
@@ -138,7 +138,7 @@ export class DefaultView extends AbstractView {
 
   async loadFonts() {
     Assets.addBundle('fonts', [
-      { alias: viewConfig.fontFamily, src: FONT_SRC }
+      { alias: viewConfig.fontFamily, src: viewConfig.fontSrc }
     ])
     await Assets.loadBundle('fonts')
   }

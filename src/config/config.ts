@@ -7,6 +7,7 @@ export const gameConfig = {
 
 export const viewConfig = {
   fontFamily: 'Marvin',
+  fontSrc: 'assets/fonts/Marvin.otf',
   charactersDistanceX: 25,
   charactersDistanceY: 20,
   charactersScale: 1,

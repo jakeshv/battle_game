@@ -1,11 +1,13 @@
-import { Application, Container, Text } from 'pixi.js'
+import { Application, Assets, Container, Text } from 'pixi.js'
 import { AbstractCharacter } from './AbstractCharacter'
 import { DistributorInterface } from '../../Distribution/DistributorInterface'
 import { MoveState } from '../../Template/AbstractView'
 import { ElementsFactoryInterface } from '../Factory/ElementsFactoryInterface'
+import { Sound } from '@pixi/sound'
 
 const ADD_DELAY_TIME = 2
 const REMOVE_DELAY_TIME = 3
+const STEPS_SOUND_SRC = 'assets/sounds/steps.mp3'
 
 export abstract class AbstractCharacterContainer {
   protected app: Application
@@ -20,6 +22,7 @@ export abstract class AbstractCharacterContainer {
   protected movable: boolean = true
   protected charactersToDeath: number = 0
   protected isNeedUpdate: boolean = true
+  protected stepsSound?: Sound
 
   constructor(app: Application, distributor: DistributorInterface, elementsFactory: ElementsFactoryInterface) {
     this.app = app
@@ -40,6 +43,11 @@ export abstract class AbstractCharacterContainer {
       }
       this.updateCharacterText()
     })
+  }
+
+  async init() {
+    Sound.from(STEPS_SOUND_SRC)
+    this.stepsSound = await Assets.load(STEPS_SOUND_SRC)
   }
 
   setTargetNumCharacters(num: number) {
@@ -136,6 +144,11 @@ export abstract class AbstractCharacterContainer {
   protected abstract getCharacterTextY(): number
 
   switchMoveAnimation(state: MoveState) {
+    if (this.stepsSound) {
+      if (!this.stepsSound.isPlaying) {
+        this.stepsSound.play()
+      }
+    }
     this.characters.forEach((character) => {
       switch (state) {
         case 'strait':
@@ -156,6 +169,9 @@ export abstract class AbstractCharacterContainer {
   }
 
   startFight() {
+    if (this.stepsSound) {
+      this.stepsSound.stop()
+    }
     this.movable = false
     this.characters.forEach((character) => {
       character.attack()
@@ -178,6 +194,9 @@ export abstract class AbstractCharacterContainer {
   abstract stopFight(): void
 
   stop() {
+    if (this.stepsSound) {
+      this.stepsSound.stop()
+    }
     this.characters.forEach((character) => {
       character.idle()
     })
